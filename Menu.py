@@ -8,7 +8,7 @@ from gameSettings import *
 pygame.init()
 
 #objects_Menu is a list containing all the images of png format
-objects_Menu = glob.glob("C:/Meggido/Arts/Menu/*png")
+objects_Menu = glob.glob("./Arts/Menu/*png")
 
 #playButton is a Pygame.Surface that contains a image
 playButton = pygame.image.load(objects_Menu[0])

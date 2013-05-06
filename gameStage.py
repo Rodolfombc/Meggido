@@ -7,12 +7,12 @@ from gameSettings import *
 pygame.init()
 
 #Importing the images into different lists
-objects_gameStage = glob.glob("C:/Meggido/Arts/gameStage/*png")
-objects_Bullets = glob.glob("C:/Meggido/Arts/gameStage/Bullets/*png")
-objects_Monster = glob.glob("C:/Meggido/Arts/gameStage/Monsters/*png")
-objects_colorPen = glob.glob("C:/Meggido/Arts/gameStage/colorPen/*png")
-objects_mapPart = glob.glob("C:/Meggido/Arts/gameStage/MapPart/*png")
-objects_brokenPart = glob.glob("C:/Meggido/Arts/gameStage/brokenParts/*png")
+objects_gameStage = glob.glob("./Arts/gameStage/*png")
+objects_Bullets = glob.glob("./Arts/gameStage/Bullets/*png")
+objects_Monster = glob.glob("./Arts/gameStage/Monsters/*png")
+objects_colorPen = glob.glob("./Arts/gameStage/colorPen/*png")
+objects_mapPart = glob.glob("./Arts/gameStage/MapPart/*png")
+objects_brokenPart = glob.glob("./Arts/gameStage/brokenParts/*png")
 
 #all_sprites_List is a list containing all sprites
 all_sprites_List = pygame.sprite.RenderPlain()
@@ -139,7 +139,7 @@ class EnemyShip(pygame.sprite.Sprite):
         #Speed of the shooting animation in frames per second
         self.fps = 35               
         #self.enemyship_frames is a list containing all the imported frames
-        self.enemyship_frames = glob.glob("C:/Meggido/Arts/gameStage/EnemyShipAnimation/*png")
+        self.enemyship_frames = glob.glob("./Arts/gameStage/EnemyShipAnimation/*png")
         for i in range(0,len(self.enemyship_frames)):
             self.animation.append(pygame.image.load(self.enemyship_frames[i]).convert_alpha())
         #self.image is the Pygame.Surface containing the EnemyShip object image(frame)
@@ -196,7 +196,7 @@ class Spaceship(pygame.sprite.Sprite):
         #self.jumpFrame tells when the game can change the frame of the charging animation
         self.jumpFrame = False
         #self.spaceship_frames is a list containing all the imported frames
-        self.spaceship_frames = glob.glob("C:/Meggido/Arts/gameStage/Spaceship/*png")
+        self.spaceship_frames = glob.glob("./Arts/gameStage/Spaceship/*png")
         for i in range(0,self.numberOfFrames):
             self.animation.append(pygame.image.load(self.spaceship_frames[i]).convert_alpha())
         #self.image is the Pygame.Surface containing the SpaceShip object image(frame)
@@ -463,4 +463,54 @@ downRingX, downRingY = 41, 505
 #upRing
 upRing = pygame.image.load(objects_gameStage[4]).convert_alpha()
 upRingX, upRingY = 40, 440
+
+
+#Sun appears when the game is finished
+sunList = pygame.sprite.RenderPlain()
+class Sun(pygame.sprite.Sprite):
+    '''Sun is just an animation of the game ending
+    '''
+    def __init__(self, posX, posY):
+        #Constructor of this class
+        pygame.sprite.Sprite.__init__(self)
+        #self.posX and self.posY represents the position of the object in X and Y axis
+        self.posX, self.posY = posX, posY
+        #self.readyToAnimate tells when the shooting animation can be rendered
+        self.readyToAnimate = False
+        #self.animationTimer will help creater a smoother animation
+        self.animationTimer = 0
+        #self.animation is a list containing all sprites used to create the charging animation
+        self.animation = []
+        #self.animation_frame represents the current frame of the charging animation
+        self.animation_frame = 0
+        #self.numberOfFrames is the total number of frames used in the charging animation
+        self.numberOfFrames = 40
+        #self.spaceship_frames is a list containing all the imported frames
+        self.sun_frames = glob.glob(".\Arts\gameStage\Sun\*png")
+        for i in range(0,self.numberOfFrames):
+            self.animation.append(pygame.image.load(self.sun_frames[i]).convert_alpha())
+        #self.image is the Pygame.Surface containing the SpaceShip object image(frame)
+        self.image = self.animation[0]
+        #self.rect is the collision box for the SpaceShip object image
+        self.rect = self.image.get_rect(center = (self.posX, self.posY))
+        
+    def animate(self):
+        #Function used to run the charging animation
+        self.animationTimer += 1
+        if(self.animationTimer > 5):
+            self.animation_frame += 1
+            self.animationTimer = 0
+        if(self.animation_frame > (self.numberOfFrames-1)):
+            self.animation_frame = self.numberOfFrames-1
+            self.readyToAnimate = False
+        if(self.animation_frame > (self.numberOfFrames-10)):
+            self.rect.x -= 2
+            self.rect.y -= 1
+        self.image = self.animation[self.animation_frame]
+
+    def positionUpdate(self):
+        if(self.rect.y > 100):
+            self.rect.y += -5
+
+        
 

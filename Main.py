@@ -1,25 +1,6 @@
-"""
-############################################################
-Meggido
-############################################################
+'''This application was made using python 2.7 with pygame 1.9.1'''
 
-:Author: *Rodolfo M. B. Costa*
-:Contact: rodolfombc@poli.ufrj.br
-:Date: $Date: 2013/04/15  $
-:Status: This is a "work in progress"
-:Revision: $Revision: 0.1 $
-:Home: `Labase <http://labase.selfip.org/>`__
-:Copyright: 2011, `GPL <http://is.gd/3Udt>`__.
-
-Serious Game in cavalier projection for memetics.
-
-__author__  = "Rodolfo M. B. Costa (rodolfombc@poli.ufrj.br) $Author: rodolfo $"
-__version__ = "0.2 $Revision$"[10:-1]
-__date__    = "2013/04/15 $Date$"
-
-"""
-
-import sys, pygame, random
+import sys, pygame, random, os
 from pygame.locals import *
 
 '''Importing the graph module to help create random maps'''
@@ -38,6 +19,40 @@ stage = 0 #This works like a game state
 
 mouseMove = False  #Detects when the user moves the mouse
 
+
+#Colecting data of the players actions
+pygame.font.init()
+font = pygame.font.SysFont("Times New Roman",20)
+pygame.key.set_repeat(400,25)
+
+#Score system
+score_zero = 0   #did an action without knowing what to do next
+score_one = 1    #did an action and after did another action that was not correct
+score_two = 2    #did an action and after did another action correctly
+score_total = 0  #the sum of all scores obtained while playing the game
+
+global dataArchive
+celPadding = 20 #used when formatting the file
+name = ""
+nameCollector = "Digite o seu nome completo, idade e sexo "
+def getName():
+    global dataArchive
+    save_path = ".\Data Archive"
+    completeName = os.path.join(save_path, name+".txt")
+    dataArchive = open(completeName, "w")
+    dataArchive.write('{0} {1} {2} {3} {4}'.format("Objeto".ljust(celPadding), \
+                                              "Posição do Objeto (X,Y)".ljust(celPadding+2), \
+                                              "Tempo (s)".ljust(celPadding), \
+                                              "Comando".ljust(celPadding), \
+                                              "Pontuacao".rjust(celPadding)+'\n'+'\n'))
+
+#This text appears before the game begins
+def drawText():
+    surface_name = font.render(name,True,white)
+    surface_nameCollector = font.render(nameCollector,True,white)
+    screen.blit(surface_name,(100,100))
+    screen.blit(surface_nameCollector,(100,70))
+
 '''Instantiating the objects'''
     #EnemyShips
 enemyShipX, enemyShipY = 100, 50
@@ -45,19 +60,8 @@ bulletsX, bulletsY = enemyShipX, (enemyShipY+60)           #bullets shot by the 
 bullets2X, bullets2Y = enemyShipX+600, (enemyShipY+60)     #bullets shot by the right enemy ship
 enemyShip = EnemyShip(enemyShipX,enemyShipY, 4, -1)        #left enemy ship
 enemyShip2 = EnemyShip(enemyShipX+600,enemyShipY, -4, 1)   #right enemy ship
-all_sprites_List.add(enemyShip, enemyShip2)
+all_sprites_List.add(enemyShip, enemyShip2)             
 
-    #Spaceship
-'''Spaceship collects the broken parts to recicle into monsters'''
-spaceshipX, spaceshipY = 120, 400
-spaceship = Spaceship(spaceshipX,spaceshipY)  
-all_sprites_List.add(spaceship)               
-
-    #Claw
-'''Claw is attached to the spaceship. Used to get get the broken parts that are orbiting'''
-claw = Claw(spaceshipX, spaceshipY)           
-clawList.add(claw)                            
-all_sprites_List.add(claw)
 
     #Monsters
 '''Monsters are used to protect the map painting from the bullets of enemyships'''
@@ -178,6 +182,18 @@ for node in nx.nodes(mapGraph):
     #print mapGraph.node[node]['name'] , "number of neighbors: %d" %mapGraph.node[node]['nNeighbors']
     #print correctPainting
 
+    #Spaceship
+'''Spaceship collects the broken parts to recicle into monsters'''
+spaceshipX, spaceshipY = 120, 400
+spaceship = Spaceship(spaceshipX,spaceshipY)  
+all_sprites_List.add(spaceship)
+
+    #Claw
+'''Claw is attached to the spaceship. Used to get get the broken parts that are orbiting'''
+claw = Claw(spaceshipX, spaceshipY)           
+clawList.add(claw)                            
+all_sprites_List.add(claw)
+
     #ColorPens
 clPenX, clPenY = 600, 515                   
 clPen = colorPen(clPenX,clPenY, 0)
@@ -186,6 +202,14 @@ clPen3 = colorPen(clPenX+100,clPenY, 2)
 clPen4 = colorPen(clPenX+150,clPenY, 3)
 colorPenList.add(clPen, clPen2, clPen3, clPen4)
 all_sprites_List.add(clPen, clPen2, clPen3, clPen4)
+
+    #Sun
+sunX, sunY = 400,500
+sun = Sun(sunX, sunY)
+sunList.add(sun)
+    #gameEnding timer
+endTimer = 0
+
 
 bulletHitMonsterList = []       #List containing the monsters that collides with bullets
 penHitMapList = []              #List containing pens that collides with mapParts
@@ -197,28 +221,53 @@ claw_Hit_bkPartList = []        #List containing bkParts that collides with claw
 clock = pygame.time.Clock()
 tInitial, tFinal = 0, 0     #Time counter for the shoots of enemyShip
 t2Initial, t2Final = 0, 0   #Time counter for the shoots of enemyShip2
-delay = 200                 #This sets the time delay for enemyShip
-delay2 = 300                #This sets the time delay for enemyShip2
-
+delay = 1000                 #This sets the time delay for enemyShip
+delay2 = 1500               #This sets the time delay for enemyShip2
 
 running = True
 while running:
+    #Total time the game has been running
+    gameTime = pygame.time.get_ticks()/1000
+    
     game_milliseconds = clock.tick(FPS)         #milliseconds passed since last frame
     game_seconds = 1/float(game_milliseconds)   #seconds passsed since last frame
     
     for event in pygame.event.get():
         #Exit of the game----------------
         if event.type == pygame.QUIT:
+            dataArchive.write("{0} {1} {2} {3}".format('Pontuação Total: ', \
+                               "%d"%score_total+"pontos |", \
+                               "Tempo Total: ", \
+                               "%d"%gameTime+"segundos"+'\n'+'\n'))
+            dataArchive.close()
             pygame.mixer.quit()
             running = False
         #--------------------------------
         
         '''Menu buttons logic'''
-        if (event.type == MOUSEBUTTONUP and stage == 0 and event.button == 1):
-            if quitButtonrect.collidepoint(pygame.mouse.get_pos()):
+        if(event.type == KEYDOWN and stage == 0):
+            if(event.key == K_ESCAPE):
                 pygame.mixer.quit()
                 running = False
-            elif playButtonrect.collidepoint(pygame.mouse.get_pos()):
+            elif(event.key == K_BACKSPACE):
+                if(len(name) > 0):
+                    name = name[:-1]
+            else:
+                try: name += str(event.unicode)
+                except: pass
+        
+        if (event.type == MOUSEBUTTONUP and stage == 0 and event.button == 1 and len(name)>3):
+            if(quitButtonrect.collidepoint(pygame.mouse.get_pos())):
+                pygame.mixer.quit()
+                running = False
+            elif(playButtonrect.collidepoint(pygame.mouse.get_pos())):
+                getName()
+                dataArchive.write("{0} {1} {2} {3} {4}".format('Botão Jogar'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(playButtonrect.x,playButtonrect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Clique".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                score_total += score_two
                 stage = 1
                 screen.fill(white)
 
@@ -233,10 +282,20 @@ while running:
                     #print clPen.dragged
                     if(not(clPen.dragged)):
                         clPen.dragged = True
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Caneta Colorida'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(clPen.rect.x,clPen.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Arraste".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
                     elif(clPen.dragged):
                         clPen.dragged = False
                     if(not(clPen.clicked)):
                         clPen.clicked = True
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Caneta Colorida'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(clPen.rect.x,clPen.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Clique".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
                     elif(clPen.clicked):
                         clPen.clicked = False
                     #print clPen.clicked
@@ -247,6 +306,12 @@ while running:
                 if monster.rect.collidepoint(pygame.mouse.get_pos()):
                     monster.dragged = True
                     monster.released = False
+                    dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Arraste".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
+            
             elif(event.type == MOUSEBUTTONUP and event.button == 1 and stage == 1):
                 monster.dragged = False
             if(event.type == MOUSEBUTTONUP and (mouseMove) and monster.rect.collidepoint(pygame.mouse.get_pos())):
@@ -256,6 +321,11 @@ while running:
                 if (mouseGetSpeed):
                     monster.mouseVel = pygame.mouse.get_rel()
                     mouseGetSpeed = False
+                dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Lançado".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
                 #print monster.released
 
         '''Drag and Drop logic for the broken parts part (1/2)'''
@@ -264,6 +334,12 @@ while running:
                 if bkPart.rect.collidepoint(pygame.mouse.get_pos()):
                     bkPart.dragged = True
                     bkPart.released = False
+                    dataArchive.write("{0} {1} {2} {3} {4}".format('Peça Quebrada'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(bkPart.rect.x,bkPart.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Arraste".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
+                    
             elif(event.type == MOUSEBUTTONUP and event.button == 1 and stage == 1):
                 bkPart.dragged = False
         
@@ -271,32 +347,60 @@ while running:
         keys = pygame.key.get_pressed()
 
         '''claw grabbing'''
-        if(keys[K_g]):
+        if(keys[K_g] and stage == 1):
             claw.isHolding = True
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Garra da Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(claw.rect.x,claw.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Coletar/Reciclar".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
         '''Spaceship movement'''
-        if(keys[K_w]):
+        if(keys[K_w] and stage == 1):
             spaceship.moveUp = True
             spaceship.moveDown = False
-        elif(keys[K_s]):
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(spaceship.rect.x,spaceship.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Movimento Cima".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
+        elif(keys[K_s] and stage == 1):
             spaceship.moveDown = True
             spaceship.moveUp = False
-        elif(keys[K_a]):
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(spaceship.rect.x,spaceship.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Movimento Baixo".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
+        elif(keys[K_a] and stage == 1):
             spaceship.moveLeft = True
             spaceship.moveRight = False
-        elif(keys[K_d]):
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(spaceship.rect.x,spaceship.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Movimento Esquerda".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
+        elif(keys[K_d] and stage == 1):
             spaceship.moveRight = True
             spaceship.moveLeft = False
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(spaceship.rect.x,spaceship.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Movimento Direita".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
         else:
             spaceship.moveUp = False
             spaceship.moveDown = False
             spaceship.moveLeft = False
             spaceship.moveRight = False
-                
+
     
     '''Drawings'''
     if(stage == 0):  #Menu
-        draw_quitButton()
-        draw_playButton()
+        screen.blit(background, (0,0))
+        if(len(name) > 3):
+            draw_quitButton()
+            draw_playButton()
+        drawText()
     if(stage == 1):  #gameStage
         screen.blit(background, (0,0))
         #print pygame.mouse.get_rel()
@@ -322,6 +426,11 @@ while running:
             claw.piecesCollected = []
             claw.formsCollected = []
             claw.colorsCollected.pop(0)
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Nave'.ljust(celPadding), \
+                                                       "%d, %d".ljust(celPadding)%(spaceship.rect.x,spaceship.rect.y), \
+                                                       "%d".ljust(celPadding)%gameTime, \
+                                                       "Monstro Reciclado".ljust(celPadding), \
+                                                       "%d".rjust(celPadding)%score_zero+'\n'+'\n'))
             #print "full"
         
         '''Timer to instantiate a bullet'''
@@ -337,7 +446,7 @@ while running:
             bullet.created = True
             bullet.right = False
             enemyShip.angleUpdate()
-            tInitial = (delay-300)
+            tInitial = (delay-(delay+100))
             #print "created left bullet"
             #print bullet.form
 
@@ -395,7 +504,7 @@ while running:
             all_sprites_List.add(bullet2) 
             bullet2.created = True
             enemyShip2.angleUpdate()
-            t2Initial = (delay2-450)
+            t2Initial = (delay2-(delay2+150))
             #print "created right bullet"
             
         '''Timer to shoot the bullet for enemyShip2'''
@@ -438,6 +547,7 @@ while running:
             '''Drag and Drop logic for the broken parts part (2/2)'''
             if((bkPart.dragged) and (not(bkPart.orbiting))):
                 bkPart.mouseUpdate()
+                
             
         '''Detects if the mouse is not moving'''
         if(pygame.mouse.get_rel()[0] == 0 and pygame.mouse.get_rel()[1] == 0):
@@ -449,7 +559,7 @@ while running:
         for clPen in colorPenList:
             if(clPen.dragged):
                 clPen.positionUpdate()
-                stage = 2
+                #stage = 2
             if(not(clPen.dragged)):
                 penHitMapList = pygame.sprite.spritecollide(clPen, mapPartList, False)
                 penHitMonsterList = pygame.sprite.spritecollide(clPen, MonsterList, clPen.notInitialPosition)
@@ -465,6 +575,12 @@ while running:
                                 #print mapGraph.node[neighbor]['name']
                                 mapGraph.node[neighbor]['nDifNeighbors'] += 1
                                 totalNeighbors += 1
+                                dataArchive.write("{0} {1} {2} {3} {4}".format('Estado do mapa'.ljust(celPadding), \
+                                           "%d, %d".ljust(celPadding)%(mapPart.rect.x,mapPart.rect.y), \
+                                           "%d".ljust(celPadding)%gameTime, \
+                                           "Estado Pintado".ljust(celPadding), \
+                                           "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                                score_total += score_two
                 '''Coloring monsters with pen'''
                 for monster in penHitMonsterList:
                     if(not(monster.dragged)):
@@ -473,6 +589,12 @@ while running:
                         monster = Monster(monster.rect.x, monster.rect.y, clPen.color, monster.form)
                         MonsterList.add(monster)
                         all_sprites_List.add(monster)
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                           "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                           "%d".ljust(celPadding)%gameTime, \
+                                           "Monstro Pintado".ljust(celPadding), \
+                                           "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                        score_total += score_two
                 clPen.resetPosition()
                 
 
@@ -492,6 +614,21 @@ while running:
                     bkPart2 = brokenPart(monster.rect.x-40, monster.rect.y, monster.color, monster.form, 1)
                     bkPart3 = brokenPart(monster.rect.x+40, monster.rect.y, monster.color, monster.form, 2)
                     brokenPartList.add(bkPart, bkPart2, bkPart3)
+                    if(monster.dragged):
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                   "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                    "%d".ljust(celPadding)%gameTime, \
+                                                   "Monstro Destruido Corretamente".ljust(celPadding), \
+                                                   "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                        score_total += score_two
+                    if(monster.released):
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                   "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                    "%d".ljust(celPadding)%gameTime, \
+                                                   "Monstro Lançado Corretamente".ljust(celPadding), \
+                                                   "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                        score_total += score_two
+                        
                 elif(((monster.color != bullet.color) and (bullet.shot)) or \
                      ((monster.form != bullet.form) and (bullet.shot))):
                     MonsterList.remove(monster)
@@ -499,7 +636,21 @@ while running:
                     bkPart = brokenPart(monster.rect.x, monster.rect.y, monster.color, monster.form, 0)
                     bkPart2 = brokenPart(monster.rect.x-40, monster.rect.y, monster.color, monster.form, 1)
                     bkPart3 = brokenPart(monster.rect.x+40, monster.rect.y, monster.color, monster.form, 2)
-                    brokenPartList.add(bkPart, bkPart2, bkPart3)        
+                    brokenPartList.add(bkPart, bkPart2, bkPart3)
+                    if(monster.dragged):
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                   "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                    "%d".ljust(celPadding)%gameTime, \
+                                                   "Monstro Destruido Incorretamente".ljust(celPadding), \
+                                                   "%d".rjust(celPadding)%score_one+'\n'+'\n'))
+                        score_total += score_one
+                    if(monster.released):
+                        dataArchive.write("{0} {1} {2} {3} {4}".format('Monstro Defesa'.ljust(celPadding), \
+                                                   "%d, %d".ljust(celPadding)%(monster.rect.x,monster.rect.y), \
+                                                    "%d".ljust(celPadding)%gameTime, \
+                                                   "Monstro Lançado Incorretamente".ljust(celPadding), \
+                                                   "%d".rjust(celPadding)%score_one+'\n'+'\n'))
+                        score_total += score_one
             '''Bullet collision with walls'''
             if( (bullet.rect.x < 0) or (bullet.rect.x > window_Width) or (bullet.rect.y < 0) \
                 or (bullet.rect.y > (window_Height-50)) ):
@@ -525,6 +676,12 @@ while running:
                     if((len(claw.colorsCollected)<1) or (bkPart.color not in claw.colorsCollected)):
                         claw.colorsCollected.append(bkPart.color)
                     brokenPartList.remove(bkPart)
+                    dataArchive.write("{0} {1} {2} {3} {4}".format('Peça Quebrada'.ljust(celPadding), \
+                                                   "%d, %d".ljust(celPadding)%(bkPart.rect.x,bkPart.rect.y), \
+                                                    "%d".ljust(celPadding)%gameTime, \
+                                                   "Peça Quebrada Coletada".ljust(celPadding), \
+                                                   "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+                    score_total += score_two
 
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -540,11 +697,20 @@ while running:
 
         #print mapGraph.node[map2]['nDifNeighbors']
 
+        print score_total
+        
         '''Checking the painting of the map'''
         if(totalNeighbors == correctPainting):
             print "PAINTING CORRECT!"
-        else:
-            print totalNeighbors
+            stage = 2
+            dataArchive.write("{0} {1} {2} {3} {4}".format('Mapa'.ljust(celPadding), \
+                               "%d, %d".ljust(celPadding)%(370,500), \
+                                "%d".ljust(celPadding)%gameTime, \
+                               "Mapa Colorido Corretamente".ljust(celPadding), \
+                               "%d".rjust(celPadding)%score_two+'\n'+'\n'))
+            score_total += score_two
+        #else:
+            #print totalNeighbors
         
         '''Drawing all objects'''
         screen.blit(upRing, (upRingX, upRingY))
@@ -556,10 +722,26 @@ while running:
         all_sprites_List.draw(screen)  
 
     if(stage == 2):
+        #closing the archive file we created
+        dataArchive.write("{0} {1} {2} {3}".format('Pontuação Total: ', \
+                               "%d"%score_total+"pontos |", \
+                               "Tempo Total: ", \
+                               "%d"%gameTime+"segundos"+'\n'+'\n'))
+        dataArchive.close()
+        #getting the background color from black to white
         if(colorFading < 255):
             colorFading += 1
         screen.fill((colorFading, colorFading, colorFading))
-    
+
+        sun.positionUpdate()
+        if(colorFading < 2):
+            sun.readyToAnimate = True
+            #print sun.readyToAnimate
+        if(sun.readyToAnimate):
+            sun.animate()
+
+        sunList.draw(screen)
+        
     pygame.display.flip()
 
 pygame.display.quit()
